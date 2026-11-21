@@ -1,0 +1,75 @@
+name: Build GG Player
+
+on:
+  push:
+    paths:
+      - '*.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Unpack uploaded step zip
+        run: |
+          shopt -s nullglob
+          zips=(GG-PLAYER-step*.zip)
+          if [ ${#zips[@]} -gt 0 ]; then
+            for z in "${zips[@]}"; do
+              echo "Unpacking $z"
+              unzip -o "$z" -x '.github/*' '__MACOSX/*'
+              rm -f "$z"
+            done
+            git config user.name "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git add -A
+            git commit -m "Apply uploaded step zip"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "No step zip found, building the repo as it is."
+          fi
+
+      - name: Read version
+        id: ver
+        run: |
+          echo "name=$(grep '^VERSION_NAME=' version.properties | cut -d= -f2 | tr -d '\r ')" >> "$GITHUB_OUTPUT"
+          echo "code=$(grep '^VERSION_CODE=' version.properties | cut -d= -f2 | tr -d '\r ')" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build release APK
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Name the APK
+        run: cp app/build/outputs/apk/release/app-release.apk "GG-Player-${{ steps.ver.outputs.name }}.apk"
+
+      - name: Keep APK as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GG-Player-${{ steps.ver.outputs.name }}
+          path: GG-Player-${{ steps.ver.outputs.name }}.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.name }}
+          name: GG Player ${{ steps.ver.outputs.name }}
+          body: |
+            GG Player ${{ steps.ver.outputs.name }} (build ${{ steps.ver.outputs.code }}).
+            See CHANGELOG.md in the repo for what changed.
+          files: GG-Player-${{ steps.ver.outputs.name }}.apk
