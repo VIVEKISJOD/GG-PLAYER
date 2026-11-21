@@ -1,7 +1,7 @@
 # GG Player - Handoff
 
 Read this first if you are an AI picking the project up. Then read CHANGELOG.md.
-Last updated: step 1 (version 0.1.0).
+Last updated: step 2 (version 0.2.0).
 
 ## What the app is
 
@@ -11,86 +11,92 @@ It plays two kinds of content, both from providers the user adds himself. The ap
 1. Live TV: the user adds IPTV providers (M3U playlist URL, Xtream Codes login, XMLTV guide URL).
 2. Movies and series: the user adds addons by pasting a manifest.json link (Stremio addon protocol: manifest, catalog, meta, stream). No limit on how many addons.
 
-Requirements from the owner
-- TV friendly: everything reachable and visible with a D-pad remote, large text, clear focus outline, safe margins
-- Same app works on phones and tablets
-- Built-in player with the settings a proper player has (tracks, subtitles, speed, aspect ratio, buffer, resume)
-- Built-in updater (checks GitHub Releases, downloads, installs)
-- Looks designed, not generic. No emojis anywhere in the UI. Palette comes from the logo (slate, gold, blue)
-- Anything not built must be labelled "Not built yet". No fake features
+App name: GG Player. Package: com.ggplayer.app. GitHub repo: GG-PLAYER (updater default is VIVEKISJOD/GG-PLAYER, editable in Settings > Updates).
 
-App name: GG Player. Package: com.ggplayer.app. Repo: GG-PLAYER on GitHub (owner's account).
-
-## Who the owner is and how to work with him
+## Owner rules (follow these every time)
 
 The owner is not a programmer and only has an Android tablet and phone with a browser. No PC, no terminal.
+- Reply in Hinglish (Hindi in English letters), short and simple
 - His only jobs: tap, paste, upload. Never ask him to run commands, install tools or edit code
-- Guide ONE step at a time. Few, bigger steps. Say exactly where to tap. At most one question per message
-- Explain errors in simple words
-- Deliver complete finished files, never "change a few lines"
-- Deliver each step as ONE zip named GG-PLAYER-step<N>.zip with the files at the zip root (no wrapping folder). He uploads it to the repo root on github.com
-- Every zip must update CHANGELOG.md and this HANDOFF.md, and bump version.properties (VERSION_CODE +1, VERSION_NAME)
+- At most ONE question per message. Claude makes the decisions
+- Always deliver complete finished files, never patches or "change this line". Give exact GitHub upload steps
+- EXACTLY 3 files per delivery: (1) one zip named GG-PLAYER-step<N>.zip with files at the zip root and no wrapping folder, the only thing he uploads to the GitHub repo root, (2) HANDOFF.md, (3) CHANGELOG.md. HANDOFF and CHANGELOG are also inside the zip so the repo stays current. They are given separately so another AI can continue if the token limit hits
+- Keep the project to 3 steps in total (see roadmap). Do not spread work over many small steps
+- Every app has in-app updates from GitHub (done in step 2) and its own settings screen with options users might need (done, extend it with every feature). Do not make silly mistakes
+- Anything not built must be labelled "Not built yet". No fake features
 - If he says he is tired, give one tiny step and wait for "done"
 - Do not change technologies without explaining why first
 
+## Design (decided in step 2)
+
+The owner wants the Cinevia look (dark UI, orange accent, rounded cards, icon bottom bar, hero card, category circles, poster rows) on phone, and the same look on Fire TV so the UI stays consistent.
+- Palette: near black background (0B0B0E), dark surfaces, one accent colour (default orange FF8A1F). The user can change the accent in Settings. Always use GG.* from ui/Theme.kt, never raw hex in screens. GG.accent reads settings state
+- Phone: bottom bar with icons (Home, Live TV, Movies, Settings). TV: left rail with icons and labels, text scaled 1.25x, safe margin from settings
+- Every interactive item uses FocusSurface (accent outline and slight grow on TV focus). Buttons use GGButton, inputs use GGField, settings rows use SettingRow, ToggleRow, ChoiceRow
+- Icons: Material core icons plus three hand drawn ones in Components.kt (TvIcon, MovieIcon, SeriesIcon). material-icons-extended is NOT used on purpose (keeps the APK small). No emojis in the UI
+- Poster rows and Trending are placeholders until addons exist (step 3), labelled "Not built yet"
+
 ## How building works
 
-- The repo contains .github/workflows/build.yml, pasted ONCE by the owner on github.com. A reference copy is in workflow/build.yml
-- Uploading GG-PLAYER-step<N>.zip to the repo root triggers the workflow. It unzips the files over the repo (skipping .github/), deletes the zip, commits, builds the release APK with Gradle 8.7 (no Gradle wrapper in the repo, the workflow installs Gradle) and publishes a GitHub Release tagged v<VERSION_NAME> with GG-Player-<VERSION_NAME>.apk attached
-- Because the workflow cannot overwrite files in .github/ (GitHub blocks that for the default token), a change to the workflow means the owner must paste the new workflow file again
-- Release signing uses keystore/gg-release.jks (alias gg, password ggplayer, committed on purpose so updates install over older builds). Never replace it, or every installed copy would have to be uninstalled first
-- The AI that writes the zip had no Android SDK, so code is not compiled before delivery. The first failure usually shows in the Actions run. Ask the owner for the red error lines of the failed step
+- The repo contains .github/workflows/build.yml, pasted ONCE by the owner on github.com. A reference copy is in workflow/build.yml. It has NOT changed since step 1, so he does not need to paste it again
+- Uploading GG-PLAYER-step<N>.zip to the repo root triggers the workflow. It unzips the files over the repo (skipping .github/), deletes the zip, commits, builds the release APK with Gradle 8.7 (no Gradle wrapper in the repo) and publishes a GitHub Release tagged v<VERSION_NAME> with GG-Player-<VERSION_NAME>.apk attached
+- IMPORTANT: unzip only overwrites and adds files. It never deletes. So never rename or delete a source file in a later zip, because the old file stays in the repo and breaks the build with duplicate declarations. Overwrite the same file names (Screens.kt, Components.kt, GGApp.kt, Theme.kt stay)
+- A change to the workflow means the owner must paste the new workflow file again (GitHub blocks the token from editing .github/)
+- Release signing uses keystore/gg-release.jks (alias gg, password ggplayer, committed on purpose so updates install over older builds). Never replace it
+- The AI that writes the zip has no Android SDK, so code is not compiled before delivery. The first failure usually shows in the Actions run. Ask the owner for the red error lines of the failed step and fix with a complete new zip (same step number plus a letter, for example GG-PLAYER-step2b.zip, version bump)
+- Every zip must update CHANGELOG.md and HANDOFF.md and bump version.properties (VERSION_CODE +1, VERSION_NAME)
 
-Installing: open the repo's Releases page, download the APK. On Fire TV use the Downloader app with the release APK link, and allow "Install unknown apps" for Downloader. On a phone, open the APK from the browser download.
+Installing: open the repo's Releases page, download the APK. On Fire TV use the Downloader app with the release APK link and allow "Install unknown apps" for Downloader. From version 0.2.0 on, updates install from inside the app (Settings > Updates). The first install of 0.2.0 over 0.1.0 is still manual because 0.1.0 has no updater.
 
-## Tech stack (decided, with reason)
+## In-app updater (how it works)
 
-- Kotlin + Jetpack Compose + Material 3: same stack as the owner's other apps, one code base for TV and phone
-- No navigation library yet. Section state lives in GGApp.kt. When the player screen arrives (step 3), add a small back stack or navigation-compose and say so in the changelog
-- Player (planned): AndroidX Media3 ExoPlayer, because it handles HLS, DASH, progressive MP4 and MPEG-TS, which covers IPTV and addon streams
-- Storage (planned): JSON files or DataStore for providers, addons and settings, to keep the build simple. Room only if lists get large (channel lists can be tens of thousands of rows, decide in step 3)
-- Networking (planned): OkHttp
-- JSON (planned): kotlinx.serialization or org.json
+update/UpdateManager.kt: reads https://api.github.com/repos/<owner>/<repo>/releases/latest, takes tag_name (v0.3.0 becomes 0.3.0) and the first .apk asset, compares with BuildConfig.VERSION_NAME, downloads to cache/updates, then opens the system installer through FileProvider (authority <applicationId>.fileprovider, paths in res/xml/file_paths.xml). If "install unknown apps" is not allowed it opens that settings page or shows instructions. Auto check on start is a setting. The repo (owner/name) is editable in Settings > Updates. The repo must be public for the API call to work without a token.
+To publish an update: owner uploads the next zip, the workflow builds and creates the release, the app shows "Update available". The tag must be higher than the installed version, so always bump VERSION_NAME.
 
 ## Code layout
 
 ```
 app/src/main/java/com/ggplayer/app/
-  MainActivity.kt        entry point, picks TV or phone mode
-  DeviceInfo.kt          isTv() check (UiModeManager, Fire TV and leanback features)
-  ui/Theme.kt            colours (object GG), typography, LocalIsTv
-  ui/Components.kt       FocusSurface, StatusTag, ScreenHeader
-  ui/GGApp.kt            sections, SideRail (TV), BottomBar (phone), back handling
-  ui/Screens.kt          Home, Live TV, Movies and Series, Settings screens
-app/src/main/res/        icons, banner, gg_mark logo, theme
-keystore/gg-release.jks  fixed signing key
-version.properties       VERSION_NAME and VERSION_CODE, read by app/build.gradle.kts
-workflow/build.yml       reference copy of the GitHub Actions workflow
+  MainActivity.kt          entry point, init settings and providers, layout mode (auto, TV, phone)
+  DeviceInfo.kt            isTv() check
+  data/AppSettings.kt      all settings as Compose state in SharedPreferences (accent, text size, layout, margin, start screen, updater)
+  data/Net.kt              small HTTP helper (manual redirects)
+  data/Providers.kt        Provider model, ProviderStore (providers.json), connection test for M3U and Xtream
+  update/UpdateManager.kt  GitHub release check, download, install
+  ui/Theme.kt              palette object GG, typography, LocalIsTv
+  ui/Components.kt         FocusSurface, GGButton, GGField, rows, icons, pagePadding
+  ui/GGApp.kt              Section enum, Route, side rail (TV), bottom bar (phone), back handling
+  ui/Screens.kt            Home (hero, categories, providers, trending placeholder), Movies screen
+  ui/ProviderScreens.kt    Live TV screen (provider list) and add or edit provider form with test
+  ui/SettingsScreens.kt    Settings, Appearance and layout, Updates
+app/src/main/res/          icons, banner, gg_mark logo, theme, file_paths.xml
+keystore/gg-release.jks    fixed signing key
+version.properties         VERSION_NAME and VERSION_CODE
+workflow/build.yml         reference copy of the workflow
 ```
 
-UI rules
-- Every interactive item uses FocusSurface so TV focus looks the same everywhere
-- Use GG.* colours, never raw hex in screens
-- TV margins 48dp horizontal, text scaled 1.25x (see Theme.kt)
-- Do not add icons packs or gradients for decoration. Text and thin lines only
+Navigation: no library. Section state and one optional Route (a screen on top of a section) live in GGApp.kt. Back closes the Route, then returns to Home, then exits. When the player arrives (step 3) extend Route or add a small back stack, and say so in the changelog.
 
-## Roadmap
+## Roadmap (3 steps total)
 
 | Step | Content | Status |
 |------|---------|--------|
-| 1 | Project shell, TV and phone layout, theme, icon, build pipeline | Done (not yet confirmed building) |
-| 2 | Provider storage and "Add IPTV provider" screens (M3U URL, Xtream login), provider list | Not started |
-| 3 | M3U parser, channel list with groups and search, Media3 player with basic controls, back stack | Not started |
-| 4 | XMLTV guide: now and next, full guide grid | Not started |
-| 5 | Addon manager: paste manifest.json link, validate, list, remove | Not started |
-| 6 | Addon browsing: catalogs, search, meta page, stream picker, play | Not started |
-| 7 | Player features: audio and subtitle tracks, external subtitles, speed, aspect ratio, resume position | Not started |
-| 8 | Full settings: playback, subtitles, network and buffer, user agent | Not started |
-| 9 | In-app updater: read latest GitHub Release, compare VERSION_CODE, download, install. Needs REQUEST_INSTALL_PACKAGES and a FileProvider. Confirm the exact GitHub owner/repo name with the owner first | Not started |
-| 10 | Favorites, parental PIN, backup and restore, polish | Not started |
+| 1 | Project shell, TV and phone layout, theme, icon, build pipeline | Done, APK built (0.1.0) |
+| 2 | Cinevia style UI for phone and TV, settings screen, in-app GitHub updater, provider add, edit, delete and connection test | Done (0.2.0), build not yet confirmed |
+| 3 | Everything else, see checklist below | Not started |
 
-Order can change if the owner asks. Always tell him why.
+### Step 3 checklist (one zip, do in this order, tell the owner only the final result)
+
+1. M3U parser (groups, logos, tvg-id) and Xtream API (categories and live streams; stream URL is server/live/user/pass/id.ts). Channel list screen with groups, search and favorites. Decide storage (JSON files are fine, Room only if lists are huge)
+2. Player: AndroidX Media3 ExoPlayer (HLS, DASH, progressive, MPEG-TS), fullscreen screen, D-pad and touch controls, channel up and down, back stack. Add OkHttp only if needed
+3. XMLTV guide: now and next on channels, full guide grid
+4. Stremio addons: paste manifest.json link, validate, list, remove; browse catalogs, search, meta page, stream picker, play. Fill the Home Trending row and poster rows with real posters (Cinevia style)
+5. Player features: audio and subtitle tracks, external subtitles, speed, aspect ratio, resume position, buffer size, user agent
+6. Settings: replace every "Not built yet" row (Playback, Audio and subtitles, Network and buffer, Parental control, Backup and restore) with real options
+7. Polish and test on TV focus order
+
+When a feature ships, remove its "Not built yet" tag. Keep the same visual components.
 
 ## Next step to do
 
-Step 2, after the owner confirms that the step 1 build is green and the app opens on his devices. If the build failed, fix that first and ship it as a step 1 fix (same step number plus a letter, for example GG-PLAYER-step1b.zip, version 0.1.1).
+Step 3, after the owner confirms the step 2 build is green and the app opens on phone and Fire TV. If the build failed, fix that first as step 2b.

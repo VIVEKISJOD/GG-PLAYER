@@ -10,55 +10,73 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.ggplayer.app.data.AppSettings
 
-/** Colours taken from the GG logo: slate background, gold and blue accents. */
+/** Cinevia-style palette: near black surfaces and one accent colour that the user can change. */
 object GG {
-    val bg = Color(0xFF1C232C)
-    val surface = Color(0xFF242D38)
-    val surfaceHigh = Color(0xFF2E3946)
-    val line = Color(0xFF354251)
-    val text = Color(0xFFE8ECF0)
-    val textDim = Color(0xFF8F9BA8)
-    val gold = Color(0xFFC9A24B)
-    val blue = Color(0xFF3C8DD9)
+    val bg = Color(0xFF0B0B0E)
+    val surface = Color(0xFF15151A)
+    val surfaceHigh = Color(0xFF1F1F26)
+    val line = Color(0xFF2A2A33)
+    val text = Color(0xFFF4F4F6)
+    val textDim = Color(0xFF9B9BA6)
+    val onAccent = Color(0xFF1A0E00)
+    val danger = Color(0xFFE5534B)
+    val ok = Color(0xFF4CB782)
+
+    /** Reads settings state, so changing the accent in Settings recolours the app at once. */
+    val accent: Color
+        get() = AppSettings.accent.color
 }
 
-/** True when running on a remote-controlled TV (Fire TV, Android TV). */
+/** True when the TV layout is in use (Fire TV, Android TV, or forced in Settings). */
 val LocalIsTv = staticCompositionLocalOf { false }
 
 @Composable
 fun GGTheme(isTv: Boolean, content: @Composable () -> Unit) {
     val colors = darkColorScheme(
-        primary = GG.gold,
-        secondary = GG.blue,
+        primary = GG.accent,
+        secondary = GG.accent,
         background = GG.bg,
         surface = GG.surface,
-        onPrimary = Color(0xFF1A1405),
+        onPrimary = GG.onAccent,
         onBackground = GG.text,
         onSurface = GG.text,
     )
     CompositionLocalProvider(LocalIsTv provides isTv) {
         MaterialTheme(
             colorScheme = colors,
-            typography = ggTypography(isTv),
+            typography = ggTypography(isTv, AppSettings.textSize.scale),
             content = content,
         )
     }
 }
 
-private fun ggTypography(tv: Boolean): Typography {
-    val s = if (tv) 1.25f else 1f
+private fun ggTypography(tv: Boolean, userScale: Float): Typography {
+    val s = (if (tv) 1.25f else 1f) * userScale
     return Typography(
         headlineLarge = TextStyle(
-            fontSize = (30 * s).sp,
-            lineHeight = (36 * s).sp,
+            fontSize = (32 * s).sp,
+            lineHeight = (38 * s).sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.5).sp,
+            color = GG.text,
+        ),
+        headlineMedium = TextStyle(
+            fontSize = (24 * s).sp,
+            lineHeight = (30 * s).sp,
             fontWeight = FontWeight.SemiBold,
-            letterSpacing = (-0.3).sp,
+            color = GG.text,
+        ),
+        titleLarge = TextStyle(
+            fontSize = (20 * s).sp,
+            lineHeight = (26 * s).sp,
+            fontWeight = FontWeight.SemiBold,
             color = GG.text,
         ),
         titleMedium = TextStyle(
-            fontSize = (18 * s).sp,
-            lineHeight = (24 * s).sp,
+            fontSize = (16 * s).sp,
+            lineHeight = (22 * s).sp,
             fontWeight = FontWeight.Medium,
             color = GG.text,
         ),
@@ -71,6 +89,12 @@ private fun ggTypography(tv: Boolean): Typography {
             fontSize = (14 * s).sp,
             lineHeight = (20 * s).sp,
             color = GG.textDim,
+        ),
+        labelLarge = TextStyle(
+            fontSize = (14 * s).sp,
+            lineHeight = (18 * s).sp,
+            fontWeight = FontWeight.SemiBold,
+            color = GG.text,
         ),
         labelSmall = TextStyle(
             fontSize = (11 * s).sp,

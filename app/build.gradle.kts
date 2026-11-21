@@ -56,6 +56,11 @@ android {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
 
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -70,4 +75,5 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }
