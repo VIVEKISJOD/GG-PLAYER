@@ -2,6 +2,14 @@
 
 Newest entry first. Every step zip must add an entry here and bump version.properties.
 
+## Step 3b - version 0.3.1 (build 4) - 2026-11-22
+
+Build fix for step 3.
+
+Fixed
+- MoreSettingsScreens.kt: missing import of dp (the only compile error in the first Actions run of 0.3.0)
+- version.properties: 0.3.1, build 4
+
 ## Step 3 - version 0.3.0 (build 3) - 2026-11-22
 
 Everything else: Stremio addons with posters, best source badges, channels, player, TV guide, real settings.

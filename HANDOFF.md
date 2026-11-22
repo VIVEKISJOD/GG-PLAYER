@@ -1,7 +1,7 @@
 # GG Player - Handoff
 
 Read this first if you are an AI picking the project up. Then read CHANGELOG.md.
-Last updated: step 3 (version 0.3.0).
+Last updated: step 3b (version 0.3.1).
 
 ## What the app is
 
@@ -97,7 +97,7 @@ Each stream gets a score. Language counts most: first language 5, dual or multi 
 |------|---------|--------|
 | 1 | Project shell, TV and phone layout, theme, icon, build pipeline | Done, APK built (0.1.0) |
 | 2 | Cinevia style UI, settings, in-app updater, providers | Done, build green (0.2.0) |
-| 3 | M3U and Xtream channels, player, XMLTV guide, Stremio addons with posters, best source badges, player features, real settings | Done (0.3.0), build not yet confirmed |
+| 3 | M3U and Xtream channels, player, XMLTV guide, Stremio addons with posters, best source badges, player features, real settings | Done (0.3.0 failed on one missing import, fixed in 0.3.1 = step 3b), build not yet confirmed |
 
 Known limits of step 3 (honest list, not fake features):
 - Written without a local Android build. If the Actions run fails, send the red error lines and fix as step 3b
