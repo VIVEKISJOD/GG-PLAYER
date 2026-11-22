@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ggplayer.app.R
 import com.ggplayer.app.data.AppSettings
+import com.ggplayer.app.data.MetaPreview
 import com.ggplayer.app.update.UpdateManager
 
 /** Top-level sections. Names of Home, LiveTv and Library match data.StartScreen. */
@@ -51,11 +53,22 @@ enum class Section(val label: String) {
     Settings("Settings"),
 }
 
-/** Screens that open on top of a section. Back closes them. */
+/** Screens that open on top of a section. Back closes the top one. */
 sealed class Route {
     data class ProviderForm(val id: String?) : Route()
+    object Providers : Route()
+    object Addons : Route()
     object Updates : Route()
     object Appearance : Route()
+    object PlaybackSettings : Route()
+    object AudioSettings : Route()
+    object NetworkSettings : Route()
+    object ParentalSettings : Route()
+    object BackupSettings : Route()
+    data class Title(val meta: MetaPreview, val autoPlay: Boolean) : Route()
+    data class Sources(val type: String, val videoId: String, val title: String) : Route()
+    object Player : Route()
+    data class Guide(val providerId: String) : Route()
 }
 
 @Composable
@@ -63,51 +76,62 @@ fun GGApp(deviceIsTv: Boolean) {
     val tv = LocalIsTv.current
     val context = LocalContext.current
     var section by remember { mutableStateOf(Section.valueOf(AppSettings.startScreen.name)) }
-    var route by remember { mutableStateOf<Route?>(null) }
+    // Back stack of screens opened on top of the current section.
+    val stack = remember { mutableStateListOf<Route>() }
+    val route: Route? = stack.lastOrNull()
 
     // Look for a new GitHub release once when the app opens.
     LaunchedEffect(Unit) {
         if (AppSettings.autoCheckUpdates) UpdateManager.check(context, silent = true)
     }
 
-    // Back closes an open screen, then returns to Home, then the system closes the app.
-    BackHandler(enabled = route != null || section != Section.Home) {
-        if (route != null) {
-            route = null
-        } else {
-            section = Section.Home
-        }
+    val pop: () -> Unit = {
+        if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
+    }
+    val open: (Route) -> Unit = { stack.add(it) }
+
+    // Back closes the top screen, then returns to Home, then the system closes the app.
+    BackHandler(enabled = stack.isNotEmpty() || section != Section.Home) {
+        if (stack.isNotEmpty()) pop() else section = Section.Home
     }
 
     val select: (Section) -> Unit = {
         section = it
-        route = null
+        stack.clear()
     }
 
     val content: @Composable () -> Unit = {
-        val r = route
-        if (r == null) {
-            when (section) {
-                Section.Home -> HomeScreen(onNavigate = select, onOpen = { route = it })
-                Section.LiveTv -> LiveTvScreen(onOpen = { route = it })
-                Section.Library -> LibraryScreen()
-                Section.Settings -> SettingsScreen(
-                    deviceIsTv = deviceIsTv,
-                    onNavigate = select,
-                    onOpen = { route = it },
-                )
+        when (val r = route) {
+            null -> when (section) {
+                Section.Home -> HomeScreen(onNavigate = select, onOpen = open)
+                Section.LiveTv -> LiveTvScreen(onOpen = open)
+                Section.Library -> LibraryScreen(onOpen = open)
+                Section.Settings -> SettingsScreen(deviceIsTv = deviceIsTv, onOpen = open)
             }
-        } else if (r is Route.ProviderForm) {
-            ProviderFormScreen(id = r.id, onClose = { route = null })
-        } else if (r is Route.Updates) {
-            UpdatesScreen(onBack = { route = null })
-        } else {
-            AppearanceScreen(onBack = { route = null })
+            is Route.ProviderForm -> ProviderFormScreen(id = r.id, onClose = pop)
+            is Route.Providers -> ProvidersListScreen(onBack = pop, onOpen = open)
+            is Route.Addons -> AddonsScreen(onBack = pop)
+            is Route.Updates -> UpdatesScreen(onBack = pop)
+            is Route.Appearance -> AppearanceScreen(onBack = pop)
+            is Route.PlaybackSettings -> PlaybackSettingsScreen(onBack = pop)
+            is Route.AudioSettings -> AudioSettingsScreen(onBack = pop)
+            is Route.NetworkSettings -> NetworkSettingsScreen(onBack = pop)
+            is Route.ParentalSettings -> ParentalSettingsScreen(onBack = pop)
+            is Route.BackupSettings -> BackupSettingsScreen(onBack = pop)
+            is Route.Title -> TitleScreen(meta = r.meta, autoPlay = r.autoPlay, onBack = pop, onOpen = open)
+            is Route.Sources -> SourcesScreen(
+                type = r.type, videoId = r.videoId, title = r.title, onBack = pop, onOpen = open,
+            )
+            is Route.Player -> PlayerScreen(onBack = pop)
+            is Route.Guide -> GuideScreen(providerId = r.providerId, onBack = pop, onOpen = open)
         }
     }
 
+    val fullscreen = route is Route.Player
     Box(modifier = Modifier.fillMaxSize().background(GG.bg)) {
-        if (tv) {
+        if (fullscreen) {
+            content()
+        } else if (tv) {
             Row(modifier = Modifier.fillMaxSize()) {
                 SideRail(current = section, onSelect = select)
                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) { content() }

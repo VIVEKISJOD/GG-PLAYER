@@ -27,7 +27,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import com.ggplayer.app.BuildConfig
 import com.ggplayer.app.data.AccentChoice
+import com.ggplayer.app.data.AddonStore
 import com.ggplayer.app.data.AppSettings
+import com.ggplayer.app.data.Lang
+import com.ggplayer.app.data.QualityPref
+import com.ggplayer.app.data.realLanguages
 import com.ggplayer.app.data.LayoutMode
 import com.ggplayer.app.data.ProviderStore
 import com.ggplayer.app.data.StartScreen
@@ -39,10 +43,11 @@ import com.ggplayer.app.update.UpdateState
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun SettingsScreen(deviceIsTv: Boolean, onNavigate: (Section) -> Unit, onOpen: (Route) -> Unit) {
+fun SettingsScreen(deviceIsTv: Boolean, onOpen: (Route) -> Unit) {
     val update = UpdateManager.state
     var confirmReset by remember { mutableStateOf(false) }
     val providerCount = ProviderStore.providers.size
+    val addonCount = AddonStore.addons.size
 
     Column(
         modifier = Modifier
@@ -53,11 +58,69 @@ fun SettingsScreen(deviceIsTv: Boolean, onNavigate: (Section) -> Unit, onOpen: (
     ) {
         ScreenHeader(title = "Settings")
 
-        GroupLabel("Library")
+        GroupLabel("Sources")
         SettingRow(
-            title = "Providers",
+            title = "Movie and series sources",
+            detail = if (addonCount == 0) "No addon added yet" else "$addonCount addons added",
+            onClick = { onOpen(Route.Addons) },
+        )
+        SettingRow(
+            title = "IPTV providers",
             detail = if (providerCount == 0) "None added yet" else "$providerCount added",
-            onClick = { onNavigate(Section.LiveTv) },
+            onClick = { onOpen(Route.Providers) },
+        )
+
+        GroupLabel("Best source for movies and series")
+        ChoiceRow(
+            title = "First language",
+            detail = "Streams in this language are picked first",
+            value = AppSettings.primaryLang.label,
+            onClick = {
+                AppSettings.updatePrimaryLang(realLanguages.cycle(AppSettings.primaryLang))
+            },
+        )
+        ChoiceRow(
+            title = "Second language",
+            detail = "Used when the first language is not available",
+            value = AppSettings.secondaryLang.label,
+            onClick = {
+                AppSettings.updateSecondaryLang(Lang.values().cycle(AppSettings.secondaryLang))
+            },
+        )
+        ChoiceRow(
+            title = "Preferred video quality",
+            detail = "If it is missing, the next lower quality is used first",
+            value = AppSettings.quality.label,
+            onClick = { AppSettings.updateQuality(QualityPref.values().cycle(AppSettings.quality)) },
+        )
+        ToggleRow(
+            title = "Pick the best source automatically",
+            detail = "Play starts the best match. Off shows the source list instead",
+            checked = AppSettings.autoPick,
+            onChange = { AppSettings.updateAutoPick(it) },
+        )
+        ToggleRow(
+            title = "Start playing when a title opens",
+            detail = "Skips the details page tap when a best source is found",
+            checked = AppSettings.autoPlayOnOpen,
+            onChange = { AppSettings.updateAutoPlayOnOpen(it) },
+        )
+
+        GroupLabel("Player")
+        SettingRow(
+            title = "Playback",
+            detail = "Resume, aspect ratio, skip length",
+            onClick = { onOpen(Route.PlaybackSettings) },
+        )
+        SettingRow(
+            title = "Audio and subtitles",
+            detail = "Audio language, subtitle language and size",
+            onClick = { onOpen(Route.AudioSettings) },
+        )
+        SettingRow(
+            title = "Network and buffer",
+            detail = "Buffer size, user agent, timeout",
+            onClick = { onOpen(Route.NetworkSettings) },
         )
 
         GroupLabel("App")
@@ -88,13 +151,16 @@ fun SettingsScreen(deviceIsTv: Boolean, onNavigate: (Section) -> Unit, onOpen: (
             value = AppSettings.startScreen.label,
             onClick = { AppSettings.updateStartScreen(StartScreen.values().cycle(AppSettings.startScreen)) },
         )
-
-        GroupLabel("Coming in step 3")
-        StaticRow("Playback", "Decoder, resume, auto-play next, aspect ratio", "Not built yet")
-        StaticRow("Audio and subtitles", "Languages, subtitle size and style, delay", "Not built yet")
-        StaticRow("Network and buffer", "Buffer size, user agent, timeout", "Not built yet")
-        StaticRow("Parental control", "PIN lock for categories", "Not built yet")
-        StaticRow("Backup and restore", "Export and import providers and settings", "Not built yet")
+        SettingRow(
+            title = "Parental control",
+            detail = "Hide adult channel groups, PIN lock",
+            onClick = { onOpen(Route.ParentalSettings) },
+        )
+        SettingRow(
+            title = "Backup and restore",
+            detail = "Copy or paste providers, addons and settings",
+            onClick = { onOpen(Route.BackupSettings) },
+        )
 
         GroupLabel("About")
         StaticRow(

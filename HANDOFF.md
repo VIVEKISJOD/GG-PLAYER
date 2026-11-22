@@ -1,14 +1,14 @@
 # GG Player - Handoff
 
 Read this first if you are an AI picking the project up. Then read CHANGELOG.md.
-Last updated: step 2 (version 0.2.0).
+Last updated: step 3 (version 0.3.0).
 
 ## What the app is
 
 GG Player is one Android app for Fire TV (remote control) and phones or tablets (touch).
 It plays two kinds of content, both from providers the user adds himself. The app ships with no content.
 
-1. Live TV: the user adds IPTV providers (M3U playlist URL, Xtream Codes login, XMLTV guide URL).
+1. Live TV: the user adds IPTV providers (M3U playlist URL, Xtream Codes login, XMLTV guide URL). Providers are managed in Settings > IPTV providers.
 2. Movies and series: the user adds addons by pasting a manifest.json link (Stremio addon protocol: manifest, catalog, meta, stream). No limit on how many addons.
 
 App name: GG Player. Package: com.ggplayer.app. GitHub repo: GG-PLAYER (updater default is VIVEKISJOD/GG-PLAYER, editable in Settings > Updates).
@@ -31,10 +31,10 @@ The owner is not a programmer and only has an Android tablet and phone with a br
 
 The owner wants the Cinevia look (dark UI, orange accent, rounded cards, icon bottom bar, hero card, category circles, poster rows) on phone, and the same look on Fire TV so the UI stays consistent.
 - Palette: near black background (0B0B0E), dark surfaces, one accent colour (default orange FF8A1F). The user can change the accent in Settings. Always use GG.* from ui/Theme.kt, never raw hex in screens. GG.accent reads settings state
-- Phone: bottom bar with icons (Home, Live TV, Movies, Settings). TV: left rail with icons and labels, text scaled 1.25x, safe margin from settings
+- Phone: bottom bar with icons (Home, Live TV, Movies, Settings). The player is fullscreen and hides the bar and rail. TV: left rail with icons and labels, text scaled 1.25x, safe margin from settings
 - Every interactive item uses FocusSurface (accent outline and slight grow on TV focus). Buttons use GGButton, inputs use GGField, settings rows use SettingRow, ToggleRow, ChoiceRow
 - Icons: Material core icons plus three hand drawn ones in Components.kt (TvIcon, MovieIcon, SeriesIcon). material-icons-extended is NOT used on purpose (keeps the APK small). No emojis in the UI
-- Poster rows and Trending are placeholders until addons exist (step 3), labelled "Not built yet"
+- Home is a streaming style page: hero card from the first catalog, then poster rows from the addons. Posters and channel logos load with Coil (AsyncImage)
 
 ## How building works
 
@@ -57,46 +57,56 @@ To publish an update: owner uploads the next zip, the workflow builds and create
 
 ```
 app/src/main/java/com/ggplayer/app/
-  MainActivity.kt          entry point, init settings and providers, layout mode (auto, TV, phone)
+  MainActivity.kt          entry point, init of settings, providers, addons, favorites, resume
   DeviceInfo.kt            isTv() check
-  data/AppSettings.kt      all settings as Compose state in SharedPreferences (accent, text size, layout, margin, start screen, updater)
-  data/Net.kt              small HTTP helper (manual redirects)
-  data/Providers.kt        Provider model, ProviderStore (providers.json), connection test for M3U and Xtream
+  data/AppSettings.kt      all settings as Compose state in SharedPreferences. Step 3 added language, quality, playback, audio, network, parental. Backup uses rawValues and writeRaw
+  data/Languages.kt        enums: Lang (with the words used to detect a language in a stream name), QualityPref, AspectChoice, BufferChoice, TimeoutChoice, SubSize, SeekStep
+  data/Net.kt              small HTTP helper (manual redirects, openStream for big files)
+  data/Providers.kt        Provider model, ProviderStore (providers.json), connection test
+  data/Live.kt             Channel, M3uParser, XtreamApi, ChannelRepo (memory plus TSV cache), FavoriteStore, ResumeStore, Parental filter, EpgStore (XMLTV, gzip ok), Backup (export and restore)
+  data/Stremio.kt          Addon models, AddonStore (addons.json), StremioApi (catalog, meta, stream)
+  data/Streams.kt          StreamParser (language, quality, size detection and scoring), StreamResolver (asks all stream addons, caches 10 min), HomeRepo (poster rows and search)
   update/UpdateManager.kt  GitHub release check, download, install
   ui/Theme.kt              palette object GG, typography, LocalIsTv
   ui/Components.kt         FocusSurface, GGButton, GGField, rows, icons, pagePadding
-  ui/GGApp.kt              Section enum, Route, side rail (TV), bottom bar (phone), back handling
-  ui/Screens.kt            Home (hero, categories, providers, trending placeholder), Movies screen
-  ui/ProviderScreens.kt    Live TV screen (provider list) and add or edit provider form with test
-  ui/SettingsScreens.kt    Settings, Appearance and layout, Updates
+  ui/Media.kt              Badge, StreamBadges, Chip, PosterCard, PosterRow
+  ui/GGApp.kt              Section enum, Route, back stack, side rail (TV), bottom bar (phone)
+  ui/Screens.kt            Home (hero, poster rows) and Movies and Series (type switch, search)
+  ui/TitleScreens.kt       Title details page (pre-selects best source, episodes) and Sources list with badges
+  ui/PlayerScreen.kt       PlayRequest, PlayerHost, Media3 player screen with all controls
+  ui/LiveScreens.kt        Live TV channel list (groups, search, favorites, now and next) and TV guide grid
+  ui/ProviderScreens.kt    IPTV providers list and add or edit form with test
+  ui/AddonScreens.kt       Settings > Movie and series sources
+  ui/SettingsScreens.kt    Settings main page, Appearance, Updates
+  ui/MoreSettingsScreens.kt Playback, Audio and subtitles, Network, Parental, Backup
 app/src/main/res/          icons, banner, gg_mark logo, theme, file_paths.xml
 keystore/gg-release.jks    fixed signing key
 version.properties         VERSION_NAME and VERSION_CODE
-workflow/build.yml         reference copy of the workflow
+workflow/build.yml         reference copy of the workflow (unchanged)
 ```
 
-Navigation: no library. Section state and one optional Route (a screen on top of a section) live in GGApp.kt. Back closes the Route, then returns to Home, then exits. When the player arrives (step 3) extend Route or add a small back stack, and say so in the changelog.
+Navigation: no library. Section state plus a back stack (mutableStateListOf of Route) in GGApp.kt. Back pops the stack, then returns to Home, then exits. Route.Player is fullscreen. To play something: set PlayerHost.request = PlayRequest(...) (use PlayerHost.forStream or forChannels), then open Route.Player.
 
-## Roadmap (3 steps total)
+## How the best source is chosen (data/Streams.kt)
+
+Each stream gets a score. Language counts most: first language 5, dual or multi audio 4, second language 3, language unknown 2, other language 1. Then quality: exact match of the preferred quality is best, lower qualities come next (nearest first), higher ones after that, unknown quality in the middle, CAM and TS heavily punished. Then the order of the addons. Streams without a direct url (torrent infoHash only) are shown but never picked and cannot play, there is no torrent engine. Language comes from words in the stream name, title, description and file name, so it is a best guess. Settings: First language, Second language, Preferred video quality, Pick best source automatically, Start playing when a title opens.
+
+## Roadmap (3 steps total, all done)
 
 | Step | Content | Status |
 |------|---------|--------|
 | 1 | Project shell, TV and phone layout, theme, icon, build pipeline | Done, APK built (0.1.0) |
-| 2 | Cinevia style UI for phone and TV, settings screen, in-app GitHub updater, provider add, edit, delete and connection test | Done (0.2.0), build not yet confirmed |
-| 3 | Everything else, see checklist below | Not started |
+| 2 | Cinevia style UI, settings, in-app updater, providers | Done, build green (0.2.0) |
+| 3 | M3U and Xtream channels, player, XMLTV guide, Stremio addons with posters, best source badges, player features, real settings | Done (0.3.0), build not yet confirmed |
 
-### Step 3 checklist (one zip, do in this order, tell the owner only the final result)
-
-1. M3U parser (groups, logos, tvg-id) and Xtream API (categories and live streams; stream URL is server/live/user/pass/id.ts). Channel list screen with groups, search and favorites. Decide storage (JSON files are fine, Room only if lists are huge)
-2. Player: AndroidX Media3 ExoPlayer (HLS, DASH, progressive, MPEG-TS), fullscreen screen, D-pad and touch controls, channel up and down, back stack. Add OkHttp only if needed
-3. XMLTV guide: now and next on channels, full guide grid
-4. Stremio addons: paste manifest.json link, validate, list, remove; browse catalogs, search, meta page, stream picker, play. Fill the Home Trending row and poster rows with real posters (Cinevia style)
-5. Player features: audio and subtitle tracks, external subtitles, speed, aspect ratio, resume position, buffer size, user agent
-6. Settings: replace every "Not built yet" row (Playback, Audio and subtitles, Network and buffer, Parental control, Backup and restore) with real options
-7. Polish and test on TV focus order
-
-When a feature ships, remove its "Not built yet" tag. Keep the same visual components.
+Known limits of step 3 (honest list, not fake features):
+- Written without a local Android build. If the Actions run fails, send the red error lines and fix as step 3b
+- No torrent playback. Torrent-only streams show a "Torrent, cannot play" badge. A debrid addon that returns direct links works
+- Language detection is a guess from text. Xtream VOD and series are not loaded, only live channels
+- External subtitles are added by link inside the player. Subtitles from addons are not used
+- Parental control hides adult channel groups by name and protects the option with a PIN. It does not lock single channels
+- Backup is copy and paste text, no file picker
 
 ## Next step to do
 
-Step 3, after the owner confirms the step 2 build is green and the app opens on phone and Fire TV. If the build failed, fix that first as step 2b.
+Owner confirms the step 3 build is green and tests on phone and Fire TV. Then fix what he reports as step 3b (same zip rules, version bump) or small follow ups.

@@ -1,13 +1,15 @@
 package com.ggplayer.app.data
 
 import java.io.ByteArrayOutputStream
+import java.io.FilterInputStream
+import java.io.InputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
 /** Small HTTP helper. Follows redirects by hand so http to https redirects also work. */
 object Net {
-    const val USER_AGENT = "GGPlayer/0.2"
+    const val USER_AGENT = "GGPlayer/0.3"
 
     fun openGet(
         url: String,
@@ -35,6 +37,26 @@ object Net {
             }
         }
         throw IOException("Too many redirects")
+    }
+
+    /** Opens the body as a stream, for big files (playlists, guides). The caller must close it. */
+    fun openStream(url: String, headers: Map<String, String> = emptyMap(), timeoutMs: Int = 30000): InputStream {
+        val conn = openGet(url, headers, timeoutMs)
+        val code = conn.responseCode
+        if (code !in 200..299) {
+            conn.disconnect()
+            throw IOException("Server answered $code")
+        }
+        val raw = conn.inputStream
+        return object : FilterInputStream(raw) {
+            override fun close() {
+                try {
+                    super.close()
+                } finally {
+                    conn.disconnect()
+                }
+            }
+        }
     }
 
     /** Reads at most [maxBytes] of the response body as text. */

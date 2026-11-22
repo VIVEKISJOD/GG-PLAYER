@@ -40,8 +40,20 @@ object ProviderStore {
 
     fun init(context: Context) {
         if (file != null) return
-        val f = File(context.applicationContext.filesDir, "providers.json")
-        file = f
+        file = File(context.applicationContext.filesDir, "providers.json")
+        readFile()
+    }
+
+    /** Replaces the whole list. Used by restore. */
+    fun replaceAll(list: List<Provider>) {
+        providers.clear()
+        providers.addAll(list)
+        persist()
+    }
+
+    private fun readFile() {
+        val f = file ?: return
+        providers.clear()
         if (!f.exists()) return
         try {
             val array = JSONArray(f.readText())

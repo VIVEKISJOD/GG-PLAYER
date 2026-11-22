@@ -28,14 +28,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.ggplayer.app.data.ChannelRepo
 import com.ggplayer.app.data.Provider
 import com.ggplayer.app.data.ProviderStore
 import com.ggplayer.app.data.ProviderType
 import kotlinx.coroutines.launch
 
-/** Live TV section. For now it manages providers. Channels and playback arrive in step 3. */
+/** Settings > IPTV providers: the list of providers, with add and edit. */
 @Composable
-fun LiveTvScreen(onOpen: (Route) -> Unit) {
+fun ProvidersListScreen(onBack: () -> Unit, onOpen: (Route) -> Unit) {
     val providers = ProviderStore.providers
     Column(
         modifier = Modifier
@@ -44,7 +45,11 @@ fun LiveTvScreen(onOpen: (Route) -> Unit) {
             .then(pagePadding()),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        ScreenHeader(title = "Live TV", subtitle = "IPTV providers you added yourself.")
+        SubHeader(title = "IPTV providers", onBack = onBack)
+        Text(
+            text = "Channels, guide and playback for Live TV come from these providers.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
         GGButton(
             text = "Add provider",
             onClick = { onOpen(Route.ProviderForm(null)) },
@@ -82,14 +87,6 @@ fun LiveTvScreen(onOpen: (Route) -> Unit) {
                     }
                 }
             }
-        }
-        InfoCard {
-            Text(text = "Channel list and playback", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "Groups, search and the player come after the providers are stored.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            StatusTag(text = "Not built yet - step 3")
         }
     }
 }
@@ -244,7 +241,9 @@ fun ProviderFormScreen(id: String?, onClose: () -> Unit) {
                 val v = validate()
                 error = v
                 if (v == null) {
-                    ProviderStore.save(build())
+                    val saved = build()
+                    ProviderStore.save(saved)
+                    ChannelRepo.invalidate(saved.id)
                     onClose()
                 }
             },

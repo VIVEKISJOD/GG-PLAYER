@@ -3,7 +3,10 @@ package com.ggplayer.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.ggplayer.app.data.AddonStore
 import com.ggplayer.app.data.AppSettings
+import com.ggplayer.app.data.FavoriteStore
+import com.ggplayer.app.data.ResumeStore
 import com.ggplayer.app.data.LayoutMode
 import com.ggplayer.app.data.ProviderStore
 import com.ggplayer.app.ui.GGApp
@@ -14,6 +17,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AppSettings.init(this)
         ProviderStore.init(this)
+        AddonStore.init(this)
+        FavoriteStore.init(this)
+        ResumeStore.init(this)
         val detectedTv = DeviceInfo.isTv(this)
         setContent {
             // Settings can force TV or phone layout, otherwise the device decides.

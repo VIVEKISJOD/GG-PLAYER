@@ -2,6 +2,34 @@
 
 Newest entry first. Every step zip must add an entry here and bump version.properties.
 
+## Step 3 - version 0.3.0 (build 3) - 2026-11-22
+
+Everything else: Stremio addons with posters, best source badges, channels, player, TV guide, real settings.
+
+Added
+- Home looks like a streaming app: hero card and poster rows (Trending, Popular and so on) from the addons. Search icon opens Movies, search works across addon catalogs
+- Movie and series sources (Stremio addons) in Settings: paste a manifest.json link (stremio:// also works), check, list, remove. One tap button for Cinemeta
+- IPTV providers moved into Settings > IPTV providers (add, edit, delete, test as before)
+- Title page: poster banner, details, episodes with seasons. It looks for the best source at once and shows it as badges, Play is one tap. "Choose source" lists all streams
+- Best source choice from Settings: first language (Hindi), second language (English), preferred quality (1080p), plus switches to pick automatically and to start playing when a title opens
+- Badges on every stream: language, quality, source (and Best match, Dual audio, Torrent, CAM). Badges that match your settings are coloured
+- Live TV: M3U parser (groups, logos, tvg-id), Xtream API, groups, search, favorites, channel cache for fast start
+- Player (Media3 ExoPlayer: HLS, DASH, progressive, MPEG-TS): fullscreen, touch and remote control, channel up and down, seek bar and skip, speed, aspect ratio, audio and subtitle tracks, external subtitle link, resume position, error retry, Xtream .ts falls back to .m3u8
+- XMLTV guide: now and next on channels, full guide grid for the next 6 hours (gzip supported)
+- Settings made real: Playback, Audio and subtitles, Network and buffer (buffer size, timeout, user agent), Parental control (hide adult groups, PIN), Backup and restore (copy and paste)
+- Back stack so Back goes player, details, home
+- Dependencies: androidx.media3 1.3.1 (exoplayer, hls, dash, ui), coil-compose 2.6.0. Manifest: largeHeap for big playlists
+
+Changed
+- Home categories and provider cards removed (providers live in Settings)
+- Net user agent 0.3
+- version.properties: 0.3.0, build 3
+
+Known
+- Written without a local Android build. The first Actions run is the first real compile. If it fails, send the red error lines of the failed step
+- No torrent playback. Torrent-only streams cannot play, a debrid addon with direct links is needed
+- Language detection is read from the stream text, so it can be wrong or unknown
+
 ## Step 2 - version 0.2.0 (build 2) - 2026-11-21
 
 New Cinevia style UI, settings, in-app updater and providers.
